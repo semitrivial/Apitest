@@ -41,6 +41,9 @@ public class Apitest
     total_queries = 0;
     nonproblematic_queries = 0;
 
+    outln( "Running API commands..." );
+    outln( "" );
+
     for ( String line = read_line(); line != null; line = read_line() )
     {
       if ( !parse_line( line ) )
@@ -62,6 +65,19 @@ public class Apitest
 
     if ( "".equals(line) || line.charAt(0) == '#' )
       return true;
+
+    if ( line.startsWith( "Sleeptime " ) )
+    {
+      sleeptime = java.lang.Integer.valueOf( line.substring( "Sleeptime ".length() ) );
+
+      if ( sleeptime < 0 )
+      {
+        parser_error( "Sleeptime must be a non-negative integer" );
+        return false;
+      }
+
+      return true;
+    }
 
     if ( line.startsWith( "Base " ) )
     {
@@ -125,7 +141,9 @@ public class Apitest
     catch( IOException e )
     {
       parser_error( "Failed to open connection", e );
-      return false;
+      prev_result = "";
+      prev_result_unreadable = true;
+      return true;
     }
 
     try
@@ -150,6 +168,7 @@ public class Apitest
       outln( "" );
       prev_result = "";
       prev_result_unreadable = true;
+      return true;
     }
 
     try
