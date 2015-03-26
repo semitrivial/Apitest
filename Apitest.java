@@ -14,7 +14,8 @@ public class Apitest
   InputStream is;
   BufferedReader br;
   String line;
-  String base_href;
+  String href_base;
+  String href_postfix;
   String prev_result;
   String prev_href;
   boolean prev_result_unreadable;
@@ -35,7 +36,8 @@ public class Apitest
       return;
 
     linenum = 0;
-    base_href = "";
+    href_base = "";
+    href_postfix = "";
     prev_result = null;
     prev_result_unreadable = false;
     total_queries = 0;
@@ -81,7 +83,14 @@ public class Apitest
 
     if ( line.startsWith( "Base " ) )
     {
-      base_href = line.substring( "Base ".length() ).trim();
+      href_base = line.substring( "Base ".length() ).trim();
+
+      return true;
+    }
+
+    if ( line.startsWith( "Postfix " ) )
+    {
+      href_postfix = line.substring( "Postfix ".length() ).trim();
 
       return true;
     }
@@ -116,7 +125,7 @@ public class Apitest
 
   private boolean send_api_query( String q )
   {
-    String href = base_href + q;
+    String href = href_base + q + href_postfix;
     URL url;
     URLConnection con;
 
