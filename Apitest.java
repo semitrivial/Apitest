@@ -24,6 +24,7 @@ public class Apitest
   int sleeptime = 100;
   int total_queries = 0;
   int nonproblematic_queries = 0;
+  boolean codefile = false;
 
   public static void main(String [] args) throws Exception
   {
@@ -57,9 +58,10 @@ public class Apitest
       throw new BadCommandLineException();
   }
 
-  public Apitest( String filename ) throws BadCommandLineException
+  public Apitest( String filename, boolean codefile ) throws BadCommandLineException
   {
     this.filename = filename;
+    this.codefile = codefile;
 
     if ( !this.open_file() )
       throw new BadCommandLineException();
@@ -79,6 +81,32 @@ public class Apitest
     line = line.trim();
     linenum++;
 
+    if ( codefile )
+    {
+      while ( line.endsWith(";") )
+        line = line.substring(0,line.length()-1).trim();
+
+      if ( line.startsWith( "Apitest(" ) && line.endsWith( ")" ) )
+      {
+        line = line.substring( "Apitest(".length(), line.length()-1 );
+        line = line.trim();
+
+        if ( line.startsWith( "\"" ) && line.endsWith( "\"" ) )
+        {
+          line = line.substring( 1, line.length()-1 ).trim();
+          line = decode_string( line );
+
+          if ( line == null )
+          {
+            parser_error( "Badly escaped C-like string, or C-like string with unsupported escape codes" );
+            return false;
+          }
+        }
+      }
+      else
+        return true;
+    }
+
     if ( "".equals(line) || line.charAt(0) == '#' )
       return true;
 
@@ -95,13 +123,26 @@ public class Apitest
       return true;
     }
 
-    if ( line.startsWith( "Include " ) )
+    if ( line.startsWith( "Include " ) || line.startsWith( "IncludeCode " ) )
     {
       Apitest apitest;
+      String starts;
+      boolean isCode;
+
+      if ( line.startsWith( "Include " ) )
+      {
+        starts = "Include";
+        isCode = false;
+      }
+      else
+      {
+        starts = "IncludeCode";
+        isCode = true;
+      }
 
       try
       {
-        apitest = new Apitest( after(line, "Include") );
+        apitest = new Apitest( after(line, starts), isCode );
       }
       catch( BadCommandLineException e )
       {
@@ -336,5 +377,51 @@ public class Apitest
   private static String after(String line, String start)
   {
     return line.substring(start.length() + 1).trim();
+  }
+
+  String decode_string( String s )
+  {
+    StringBuilder sb = new StringBuilder( s.length() );
+    int len = s.length();
+    boolean fSlash = false;
+
+    for ( int i = 0; i < len; i++ )
+    {
+      char c = s.charAt(i);
+
+      if ( fSlash )
+      {
+        fSlash = false;
+        switch( c )
+        {
+          case '\\':
+            sb.append('\\');
+            break;
+          case '\"':
+            sb.append('\"');
+            break;
+          default:
+            return null;
+        }
+      }
+      else
+      {
+        switch(c)
+        {
+          case '\\':
+            fSlash = true;
+            continue;
+          case '\"':
+            return null;
+          default:
+            sb.append(c);
+        }
+      }
+    }
+
+    if ( fSlash )
+      return null;
+    else
+      return sb.toString();
   }
 }
