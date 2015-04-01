@@ -84,7 +84,7 @@ public class Apitest
 
     if ( line.startsWith( "Sleeptime " ) )
     {
-      sleeptime = java.lang.Integer.valueOf( line.substring( "Sleeptime ".length() ) );
+      sleeptime = java.lang.Integer.valueOf( after(line, "Sleeptime") );
 
       if ( sleeptime < 0 )
       {
@@ -101,7 +101,7 @@ public class Apitest
 
       try
       {
-        apitest = new Apitest( line.substring( "Include ".length() ).trim() );
+        apitest = new Apitest( after(line, "Include") );
       }
       catch( BadCommandLineException e )
       {
@@ -121,14 +121,20 @@ public class Apitest
 
     if ( line.startsWith( "Base " ) )
     {
-      href_base = line.substring( "Base ".length() ).trim();
+      href_base = after(line, "Base");
+
+      if ( href_base.equals("none") )
+        href_base = "";
 
       return true;
     }
 
     if ( line.startsWith( "Postfix " ) )
     {
-      href_postfix = line.substring( "Postfix ".length() ).trim();
+      href_postfix = after(line, "Postfix");
+
+      if ( href_postfix.equals("none") )
+        href_postfix = "";
 
       return true;
     }
@@ -144,7 +150,7 @@ public class Apitest
       if ( prev_result_unreadable )
         return true;
 
-      String expected = line.substring( "Expect ".length() );
+      String expected = after(line, "Expect");
 
       if ( !prev_result.contains( expected ) )
       {
@@ -325,5 +331,10 @@ public class Apitest
     dest.prev_href = src.prev_href;
     dest.prev_result_unreadable = src.prev_result_unreadable;
     dest.sleeptime = src.sleeptime;
+  }
+
+  private static String after(String line, String start)
+  {
+    return line.substring(start.length() + 1).trim();
   }
 }
