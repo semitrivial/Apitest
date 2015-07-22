@@ -15,16 +15,16 @@ public class Apitest
   InputStream is;
   BufferedReader br;
   String line;
-  String href_base = "";
-  String href_postfix = "";
-  String prev_result = null;
-  String prev_href = null;
-  boolean prev_result_unreadable = false;
-  int linenum = 0;
-  int sleeptime = 100;
-  int total_queries = 0;
-  int nonproblematic_queries = 0;
-  boolean codefile = false;
+  String hrefBase = "";
+  String hrefPostfix = "";
+  String prevResult = null;
+  String prevHref = null;
+  boolean prevResultUnreadable = false;
+  int lineNumber = 0;
+  int sleepTime = 100;
+  int totalQueries = 0;
+  int nonproblematicQueries = 0;
+  boolean codeFile = false;
 
   public static void main(String [] args) throws Exception
   {
@@ -43,10 +43,10 @@ public class Apitest
 
     apitest.run();
 
-    outln( "Finished running " + apitest.total_queries + " queries." );
+    outln( "Finished running " + apitest.totalQueries + " queries." );
 
-    if ( apitest.nonproblematic_queries < apitest.total_queries )
-      outln( "Of those, " + (apitest.total_queries - apitest.nonproblematic_queries) + " had unexpected behavior." );
+    if ( apitest.nonproblematicQueries < apitest.totalQueries )
+      outln( "Of those, " + (apitest.totalQueries - apitest.nonproblematicQueries) + " had unexpected behavior." );
     else
       outln( "All queries behaved as expected." );
 
@@ -54,34 +54,34 @@ public class Apitest
 
   public Apitest( String [] args ) throws BadCommandLineException
   {
-    if ( !this.parse_cmdline( args ) )
+    if ( !this.parseCommandLine( args ) )
       throw new BadCommandLineException();
   }
 
-  public Apitest( String filename, boolean codefile ) throws BadCommandLineException
+  public Apitest( String filename, boolean codeFile ) throws BadCommandLineException
   {
     this.filename = filename;
-    this.codefile = codefile;
+    this.codeFile = codeFile;
 
-    if ( !this.open_file() )
+    if ( !this.openFile() )
       throw new BadCommandLineException();
   }
 
   private void run()
   {
-    for ( String line = read_line(); line != null; line = read_line() )
+    for ( String line = readLine(); line != null; line = readLine() )
     {
-      if ( !parse_line( line ) )
+      if ( !parseLine( line ) )
         return;
     }
   }
 
-  private boolean parse_line( String line )
+  private boolean parseLine( String line )
   {
     line = line.trim();
-    linenum++;
+    lineNumber++;
 
-    if ( codefile )
+    if ( codeFile )
     {
       while ( line.endsWith(";") )
         line = line.substring(0,line.length()-1).trim();
@@ -94,11 +94,11 @@ public class Apitest
         if ( line.startsWith( "\"" ) && line.endsWith( "\"" ) )
         {
           line = line.substring( 1, line.length()-1 ).trim();
-          line = decode_string( line );
+          line = decodeString( line );
 
           if ( line == null )
           {
-            parser_error( "Badly escaped C-like string, or C-like string with unsupported escape codes" );
+            parserError( "Badly escaped C-like string, or C-like string with unsupported escape codes" );
             return false;
           }
         }
@@ -110,13 +110,13 @@ public class Apitest
     if ( "".equals(line) || line.charAt(0) == '#' )
       return true;
 
-    if ( line.startsWith( "Sleeptime " ) )
+    if ( line.startsWith( "sleeptime " ) )
     {
-      sleeptime = java.lang.Integer.valueOf( after(line, "Sleeptime") );
+      sleepTime = java.lang.Integer.valueOf( after(line, "Sleeptime") );
 
-      if ( sleeptime < 0 )
+      if ( sleepTime < 0 )
       {
-        parser_error( "Sleeptime must be a non-negative integer" );
+        parserError( "Sleeptime must be a non-negative integer" );
         return false;
       }
 
@@ -146,75 +146,75 @@ public class Apitest
       }
       catch( BadCommandLineException e )
       {
-        parser_error( "Could not 'Include' the indicated file" );
+        parserError( "Could not 'Include' the indicated file" );
         return false;
       }
 
-      sync_apitests(apitest,this);
+      syncApitests(apitest,this);
       apitest.run();
-      sync_apitests(this,apitest);
+      syncApitests(this,apitest);
 
-      total_queries += apitest.total_queries;
-      nonproblematic_queries += apitest.nonproblematic_queries;
+      totalQueries += apitest.totalQueries;
+      nonproblematicQueries += apitest.nonproblematicQueries;
 
       return true;
     }
 
     if ( line.startsWith( "Base " ) )
     {
-      href_base = after(line, "Base");
+      hrefBase = after(line, "Base");
 
-      if ( href_base.equals("none") )
-        href_base = "";
+      if ( hrefBase.equals("none") )
+        hrefBase = "";
 
       return true;
     }
 
     if ( line.startsWith( "Postfix " ) )
     {
-      href_postfix = after(line, "Postfix");
+      hrefPostfix = after(line, "Postfix");
 
-      if ( href_postfix.equals("none") )
-        href_postfix = "";
+      if ( hrefPostfix.equals("none") )
+        hrefPostfix = "";
 
       return true;
     }
 
     if ( line.startsWith( "Expect " ) )
     {
-      if ( prev_result == null )
+      if ( prevResult == null )
       {
-        parser_error( "'Expect' found before any requests were found" );
+        parserError( "'Expect' found before any requests were found" );
         return false;
       }
 
-      if ( prev_result_unreadable )
+      if ( prevResultUnreadable )
         return true;
 
       String expected = after(line, "Expect");
 
-      if ( !prev_result.contains( expected ) )
+      if ( !prevResult.contains( expected ) )
       {
-        outln( "("+filename+":"+linenum+") URL: " + prev_href );
+        outln( "("+filename+":"+lineNumber+") URL: " + prevHref );
         outln( "Expected pattern was not found in the API response!" );
         outln( "" );
-        prev_result_unreadable = true;
-        nonproblematic_queries--;
+        prevResultUnreadable = true;
+        nonproblematicQueries--;
       }
 
       return true;
     }
 
-    return send_api_query( line );
+    return sendApiQuery( line );
   }
 
-  private boolean send_api_query( String q )
+  private boolean sendApiQuery( String q )
   {
-    String href = href_base + q + href_postfix;
+    String href = hrefBase + q + hrefPostfix;
     URL url;
     URLConnection con;
 
-    total_queries++;
+    totalQueries++;
 
     try
     {
@@ -222,11 +222,11 @@ public class Apitest
     }
     catch( MalformedURLException e )
     {
-      parser_error( "This URL does not seem to be well-formed", e );
+      parserError( "This URL does not seem to be well-formed", e );
       return false;
     }
 
-    prev_href = href;
+    prevHref = href;
 
     try
     {
@@ -234,9 +234,9 @@ public class Apitest
     }
     catch( IOException e )
     {
-      parser_error( "Failed to open connection", e );
-      prev_result = "";
-      prev_result_unreadable = true;
+      parserError( "Failed to open connection", e );
+      prevResult = "";
+      prevResultUnreadable = true;
       return true;
     }
 
@@ -245,47 +245,47 @@ public class Apitest
       BufferedReader r = new BufferedReader( new InputStreamReader( con.getInputStream() ) );
       StringBuilder sb = new StringBuilder();
 
-      for ( String replyline = read_line( r ); replyline != null; replyline = read_line( r ) )
+      for ( String replyLine = readLine( r ); replyLine != null; replyLine = readLine( r ) )
       {
-        sb.append( replyline );
+        sb.append( replyLine );
         sb.append( "\n" );
       }
 
-      prev_result = sb.toString();
-      prev_result_unreadable = false;
+      prevResult = sb.toString();
+      prevResultUnreadable = false;
     }
     catch( IOException e )
     {
-      outln( "("+filename+":"+linenum+") URL: " + href );
+      outln( "("+filename+":"+lineNumber+") URL: " + href );
       outln( "Failed to read API results due to Input/Output Exception" );
       outln( "Details: "+e.getLocalizedMessage() );
       outln( "" );
-      prev_result = "";
-      prev_result_unreadable = true;
+      prevResult = "";
+      prevResultUnreadable = true;
       return true;
     }
 
     try
     {
-      Thread.currentThread().sleep( sleeptime );
+      Thread.currentThread().sleep( sleepTime );
     }
     catch( java.lang.InterruptedException e )
     {
-      parser_error( "Failed to sleep between API requests", e );
+      parserError( "Failed to sleep between API requests", e );
       return false;
     }
 
-    nonproblematic_queries++;
-    prev_result_unreadable = false;
+    nonproblematicQueries++;
+    prevResultUnreadable = false;
     return true;
   }
 
-  private String read_line( )
+  private String readLine( )
   {
-    return read_line( br );
+    return readLine( br );
   }
 
-  private String read_line( BufferedReader bufferedReader )
+  private String readLine( BufferedReader bufferedReader )
   {
     try
     {
@@ -297,7 +297,7 @@ public class Apitest
     }
   }
 
-  private boolean parse_cmdline( String [] args )
+  private boolean parseCommandLine( String [] args )
   {
     if ( args.length < 1 )
     {
@@ -309,7 +309,7 @@ public class Apitest
 
     filename = args[args.length-1];
 
-    return open_file();
+    return openFile();
   }
 
   private static void outln( String str )
@@ -322,20 +322,20 @@ public class Apitest
     System.err.println( err );
   }
 
-  private void parser_error( String err )
+  private void parserError( String err )
   {
-    if ( linenum != 0 )
-      errln( "(" + filename + ":" + linenum + ") " + err );
+    if ( lineNumber != 0 )
+      errln( "(" + filename + ":" + lineNumber + ") " + err );
     else
       errln( "(" + filename + ") " + err );
   }
 
-  private void parser_error( String err, Throwable e )
+  private void parserError( String err, Throwable e )
   {
-    parser_error( err + "\nDetails: " + e.getLocalizedMessage() );
+    parserError( err + "\nDetails: " + e.getLocalizedMessage() );
   }
 
-  boolean open_file()
+  boolean openFile()
   {
     try
     {
@@ -365,13 +365,13 @@ public class Apitest
     }
   }
 
-  void sync_apitests( Apitest dest, Apitest src )
+  void syncApitests( Apitest dest, Apitest src )
   {
-    dest.href_base = src.href_base;
-    dest.href_postfix = src.href_postfix;
-    dest.prev_href = src.prev_href;
-    dest.prev_result_unreadable = src.prev_result_unreadable;
-    dest.sleeptime = src.sleeptime;
+    dest.hrefBase = src.hrefBase;
+    dest.hrefPostfix = src.hrefPostfix;
+    dest.prevHref = src.prevHref;
+    dest.prevResultUnreadable = src.prevResultUnreadable;
+    dest.sleepTime = src.sleepTime;
   }
 
   private static String after(String line, String start)
@@ -379,7 +379,7 @@ public class Apitest
     return line.substring(start.length() + 1).trim();
   }
 
-  String decode_string( String s )
+  String decodeString( String s )
   {
     StringBuilder sb = new StringBuilder( s.length() );
     int len = s.length();
